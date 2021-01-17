@@ -1,0 +1,108 @@
+---
+title: "Emotion Detection in Tweets"
+author: 
+date: "12/6/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Introduction
+
+As amount of text data on social media platforms increases rapidly, we can use such data such as tweets to detect public's emotional reaction towards certain topics. In this project, we present an end-to-end model for emotion detection in tweets using R. From text data representation and classification to novel visualizations, we aim to build powerful model to detect emotion in social media text data and present statistical textual information behind each emotion category through visualization.
+
+## Dataset Overview
+
+We used [__Emotion Intensity Dataset__](https://saifmohammad.com/WebDocs/EmoInt-2017.pdf) by Mohammad and Bravo-Marquez. It contains 7102 tweets each annotated with single emotion from anger, fear, joy or sadness and an emotion intensity score scaled to 0-1. We use 80% data for training and 20% for testing. Below are some examples from the data:
+
+```{r}
+data = read.csv('data.csv')
+knitr::kable(data[c(908, 3614, 2903, 6000),c("tweets", "label", "intensity")])
+```
+
+From the following plots, we see that emotion intensity of tweets is normally distirbuted in all categories and sentence length distribution is similar across each category. 
+
+![Boxplot of Sentence Length per Emotion](visualization/boxplot.png){width=300px} ![Hisogram of Emotion Intensity](visualization/histogram.png){width=300px}  
+
+
+## Preprocessing
+
+We did following preprocessing on our data and store preprocessed data in "preprocessed_data/" folder in .csv format:
+
+ - Change all characters to lower case
+ 
+ - Remove punctuations, redundant white spaces and special characters (excluding "#" for mining hashtags)
+ 
+ - Create a new column "hashtags" which contains all hashtags in each tweet
+ 
+## Mining Top Emotional Words & Hashtags
+
+To mine most representitve emotional words in tweets for each emotion, we use two sample t-test of word distribution in tweets of a specific category vs word distribution in tweets not of that category. The larger the t-statistic of a word, the more representitve it is for that category. Using this method, we find top positive and negative words in each category and store them in "emotion_words/" and "emotion_hashtags/" folders. We then use barplot to visualize their ranking and t-statistics.
+
+### Visualization of Emotional Words
+
+From the following barplots, we see that the top ranked words resemble their emotion category. With the exception of the category 'fear', the top ranked word for each category was a synonym to the category itself. For example, word 'angry' had the highest t-statistics with 9.202 for the category 'anger'. From the results, we can see that our mining method correctly identifies reasonable representative words from emotion tweets.
+
+![Barplot of Top 10 Words for Anger](visualization/bar_anger.png){width=300px} ![Barplot of Top 10 Words for Fear](visualization/bar_fear.png){width=300px}
+
+
+
+![Barplot of Top 10 Words for Joy](visualization/bar_joy.png){width=300px} ![Barplot of Top 10 Words for Sadness](visualization/bar_sadness.png){width=300px}
+
+### Visualization of Emotional Hashtags
+
+From the following barplots, we see that the top ranked hastags reflect their emotion category. Similar to emotion words above, top ranked hashtags are often the category word itself. For example, '#fear' had the highest t-statistics with 7.268 for the category 'fear'. From the results, we can see that our mining method correctly identifies reasonable representative hashtags from emotion tweets.
+
+![Barplot of Top 10 Hashtags for Anger](visualization/bar_anger_hashtag.png){width=300px} ![Barplot of Top 10 Hashtags for Fear](visualization/bar_fear_hashtag.png){width=300px}
+
+![Barplot of Top 10 Hashtags for Joy](visualization/bar_joy_hashtag.png){width=300px} ![Barplot of Top 10 Hashtags for Sadness](visualization/bar_sadness_hashtag.png){width=300px}
+
+## Emotion Prediction Model
+
+To build a model for emotion detection in tweets, we fisrt obtain vector representation of each tweet sentence with ["fastrtext"](https://cran.r-project.org/web/packages/fastrtext/index.html) package. The vectors are obtained from recent state-of-the-art text representation models with some simple fine-tuning. We then obtain vector-label pairs as our training data and use XGBoost to train our model. Our model achieves following results:
+
+```{r}
+result = read.csv("model_result.csv")
+caret::confusionMatrix(factor(result$y_test), factor(result$prediction), mode="everything")
+```
+
+Note: classes 0-3 are "anger", "fear", "joy" and "sadness" respectively. 
+
+The model achieves around 0.5 F1-score on first three classes and around 0.34 F1-score in "sadness" class. The results are acceptable as it is a 4-class classification model. Such model can be used to approximate emotion of unlabeled tweets.
+
+## Word Cloud Visualization
+
+We create word cloud for preprocessed tweets in each category to get a big picture of vocabularies in emotional tweets. The size and color signify the frequency of the word in the specified emotion category. We have limited the maximum number of words for each cloud to 100.
+
+### Word Cloud for Emotion 'Anger'
+
+As shown in the word cloud below, we see that the most frequent words are rage, offend, anger, etc... Not all words in the cloud directly resemble the emotion 'anger', but majority of the words reasonably represent the emotion tweets for 'anger'.
+
+
+![Word Cloud for Emotion 'Anger'](visualization/wcloud_anger.png){width=400px} 
+
+
+\newpage
+
+### Word Cloud for Emotion 'Fear'
+
+As shown in the word cloud below, we see that the most frequent words are terror, fear, amp, etc... Not all words in the cloud directly resemble the emotion 'fear', but majority of the words reasonably represent the emotion tweets for 'fear'. 
+
+
+![Word Cloud for Emotion 'Fear'](visualization/wcloud_fear.png){width=400px}
+
+### Word Cloud for Emotion 'Joy'
+
+As shown in the word cloud below, we see that the most frequent words are happy, cheer, smile, etc... Not all words in the cloud directly resemble the emotion 'joy', but majority of the words reasonably represent the emotion tweets for 'joy'.
+
+
+![Word Cloud for Emotion 'Joy'](visualization/wcloud_joy.png){width=400px} 
+
+### Word Cloud for Emotion 'Sadness'
+
+As shown in the word cloud below, we see that the most frequent words are sad, depress, lost, etc... Not all words in the cloud directly resemble the emotion 'sadness', but majority of the words reasonably represent the emotion tweets for 'sadness'.
+
+
+![Word Cloud for Emotion 'Sadness'](visualization/wcloud_sadness.png){width=400px}
