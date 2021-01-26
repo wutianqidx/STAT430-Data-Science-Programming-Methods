@@ -1,0 +1,106 @@
+---
+title: "Emotion Detection in Tweets"
+author: "Vicky Wang, Sung Hwan Suh, and Tianqi Wu"
+date: "December 12, 2019"
+output: 
+  ioslides_presentation:
+    widescreen: true
+    smaller: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Introduction
+
+__Background__: Emotional detection is effective in mining public opinions towards certain topics
+
+__Goal__: 
+
+  - Investigate representative vocabularies in emotional tweets
+  
+  - Build model to detect emotion from social media text
+
+__Dataset__: Emotion Intensity Dataset (2017): 7102 tweets annotated with emotion and intensity score
+  
+  
+#### Example Tweets
+```{r}
+data = read.csv('data.csv')
+knitr::kable(data[c(2007, 1, 1838, 3459), c("tweets", "label", "intensity")])
+```
+
+## Preprocessing
+
+- Convert all characters in each tweet to lower case
+
+- Remove punctuations, blank spaces, and special characters
+  
+  - Keep "#" for mining hashtags
+
+- Create a new column containing all hashtags in each tweet
+
+#### Example Preprocessed Tweets
+```{r}
+data = read.csv('preprocessed_data/preprocessed_data.csv')
+knitr::kable(data[c(2007, 1, 1838, 3459), c("tweets", "hashtags", "label", "intensity")])
+```
+
+
+## Mining Top Emotional Words & Hashtags
+
+- Two sample t-test was performed
+  
+  - Word distribution in tweets of a specific category vs not of a specific category
+  
+  - Bigger t-statistic value = more representative
+
+- Using the test, find top positive and negative words/hashtags
+
+#### Partial Code
+```{r, eval=FALSE, echo=TRUE}
+  summ = matrix(0, nrow = vocab_size, ncol=4)
+  summ[,1] = colapply_simple_triplet_matrix(as.simple_triplet_matrix(dtm[emotion==label, ]),mean)
+  summ[,2] = colapply_simple_triplet_matrix(as.simple_triplet_matrix(dtm[emotion==label, ]),var)
+  summ[,3] = colapply_simple_triplet_matrix(as.simple_triplet_matrix(dtm[emotion!=label, ]),mean)
+  summ[,4] = colapply_simple_triplet_matrix(as.simple_triplet_matrix(dtm[emotion!=label, ]),var)
+  n1 =sum(emotion==label); 
+  n =length(emotion)
+  n0 = n - n1
+  scores = (summ[,1] - summ[,3])/sqrt(summ[,2]/n1 + summ[,4]/n0)
+```
+
+## Visualization of Emotional Words & Hashtags
+
+![Barplot of Top 10 Words for Anger](visualization/bar_anger.png){width=450px}![Barplot of Top 10 Words for Joy](visualization/bar_joy.png){width=450px}
+
+![Barplot of Top 10 Hashtags for Anger](visualization/bar_anger_hashtag.png){width=450px}![Barplot of Top 10 Hashtags for Joy](visualization/bar_joy_hashtag.png){width=450px}
+
+
+## Emotion Prediction Model
+
+- Using "fastrtext" package, we first obtained vector representation for each tweet
+
+- Vector-label pairs obtained will be used as our training data
+  
+- Use XGBoost to train our model
+
+- Achieved ~0.5 F1-score for "anger", "fear", "joy" and ~0.34 F1-score for "sadness"
+
+- Confusion matrix shown below
+
+```{r, eval=TRUE, echo=FALSE}
+result = read.csv("model_result.csv")
+caret::confusionMatrix(factor(result$y_test), factor(result$prediction), mode="prec_recall")
+```
+
+## Word Cloud Visualization
+
+- Created a word cloud from preprocessed tweets to better visualize the vocabularies used in emotional tweets
+  
+  - Frequency of the words are represented by size and color
+  
+  - Limited maximum number of words to 100
+
+![](visualization/wcloud_anger.png){width=450px}![](visualization/wcloud_fear.png){width=450px}
